@@ -8,7 +8,6 @@ from typing import Optional
 
 app = FastAPI()
 
-# Request model
 class RequestData(BaseModel):
     url: str
     data_needed: str
@@ -24,29 +23,23 @@ def ping(data: RequestData):
     zyte_api_key = data.zyte_api_key
     openai_api_key = data.openai_api_key
 
-    if (runs < 1):
-        runs = 1
-    if (runs > 10):
-        runs = 10
+    runs = max(1, min(runs, 20))
 
     url_list = url.split(",") #list
-    needed_data = data_needed #string
-    final_output = {'found':{}, 'missing':[], 'suggested_links':[]} #dictionary
+    needed_data = data_needed.split(",") #string
+    final_output = {'found':{}, 'missing':needed_data, 'suggested_links':url_list} #dictionary
 
     i=0
     while(i<runs):
-        if((needed_data.strip() != '')):
-            output = web_scrape(url_list[i], needed_data, zyte_api_key, openai_api_key)
+        if(needed_data != [] and needed_data != None):
+            output = web_scrape(url_list[i], final_output, zyte_api_key, openai_api_key)
 
-            if (output != None):
-                final_output['found'].update(output['found'])
-                needed_data = ",".join(output["missing"])
+            if (output["missing"] != None and output["missing"]!=[]):
+                final_output.update(output)
                 url_list.extend(output["suggested_links"])
         else:
             break
         i = i+1
 
-    final_output["missing"] = output["missing"]
-    final_output["suggested_links"] = list(set(url_list[runs:]))
-
+    print(final_output)
     return final_output

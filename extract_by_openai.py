@@ -1,6 +1,6 @@
 from openai import OpenAI
 
-def extract_data(data_needed, cleaned_text, all_links_list, social_links, emails, phone_nos, openai_api_key):
+def extract_data(final_output, cleaned_text, all_links_list, openai_api_key):
     try:  
         client = OpenAI(
             base_url = "https://openrouter.ai/api/v1",
@@ -10,33 +10,30 @@ def extract_data(data_needed, cleaned_text, all_links_list, social_links, emails
         prompt = f"""
         You are an intelligent data extraction assistant.
 
-        Your task is to:
-        1. Extract the following details: {data_needed}
-        2. First search in the structured data like emails, phone numbers, and social media links.
-        3. Then, search the unstructured webpage content to extract any remaining details.
-        4. At the end, suggest which link(s) from the page are most likely to help find the missing details.
+        Your task is:
+        1. Update the previously found fields if better information is found.
+        2. Extract any missing fields from the current page if available.
+        3. Suggest which link(s) from the page are most likely to help find the missing details.
 
         Inputs:
+        Previously found data (may be incomplete):
+        {final_output}
 
-        Structured data:
-        - Emails found (if any): {emails}
-        - Phone numbers found (if any): {phone_nos}
-        - Social media links (if any): {social_links}
-
-        All links on page:
+        All links on current page:
         {all_links_list}
 
-        Webpages' content:
+        Current webpage content:
         {cleaned_text}
 
         Instructions:
-        - Use structured data first.
-        - Then scan the webpage text to extract remaining values.
-        - Use only what is explicitly available; do not guess.
-        - Return two sections:
-        1. "found" — with the fields you successfully extracted, as JSON key:value pairs
-        2. "missing" — a list of field names that were not found
-        3. "suggested_links" — URLs (from the given list) likely to contain the missing fields
+        - check the webpage text for missing details.
+        - If better information is found for already extracted fields, update it.
+        - Do not guess or hallucinate information; only use what is explicitly available.
+        - Preserve already found fields unless better information is found.
+        - After processing, return three parts:
+        1. "found" — with updated or newly found fields as key-value pairs
+        2. "missing" — list of field names still missing
+        3. "suggested_links" — 2-3 best URLs (from the given list) likely to help find the missing fields, also arrange the links in priority order, starting with the link on which the chances are highest to find the missing data and ending at the link with least possibility of having the missing data available
 
         Output format:
 
@@ -56,7 +53,7 @@ def extract_data(data_needed, cleaned_text, all_links_list, social_links, emails
         messages=[
             {"role": "user", "content": prompt},
         ],
-        temperature=0
+        temperature = 0
         )
 
         return (response.choices[0].message.content)
