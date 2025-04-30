@@ -1,6 +1,6 @@
 from openai import OpenAI
 
-def extract_data(final_output, cleaned_text, all_links_list, openai_api_key):
+def extract_data(final_output, cleaned_text, all_links_list, openai_api_key, llm_model):
     try:  
         client = OpenAI(
             base_url = "https://openrouter.ai/api/v1",
@@ -27,11 +27,11 @@ def extract_data(final_output, cleaned_text, all_links_list, openai_api_key):
 
         Instructions:
         - check the webpage text for missing details.
-        - If better information is found for already extracted fields, update it.
+        - If better information is found for already extracted fields, only then update it.
         - Do not guess or hallucinate information; only use what is explicitly available.
-        - Preserve already found fields unless better information is found.
+        - Preserve already found fields unless better information is found. Output relevant data.
         - After processing, return three parts:
-        1. "found" — with updated or newly found fields as key-value pairs
+        1. "found" — with already found, updated and newly found correct fields as key-value pairs
         2. "missing" — list of field names still missing
         3. "suggested_links" — 2-3 best URLs (from the given list) likely to help find the missing fields, also arrange the links in priority order, starting with the link on which the chances are highest to find the missing data and ending at the link with least possibility of having the missing data available
 
@@ -49,14 +49,12 @@ def extract_data(final_output, cleaned_text, all_links_list, openai_api_key):
         """
 
         response = client.chat.completions.create(
-        model="gpt-4-turbo",
-        messages=[
-            {"role": "user", "content": prompt},
-        ],
-        temperature = 0
+            model= llm_model, #"deepseek/deepseek-chat-v3-0324", #"mistralai/mistral-tiny", #"deepseek/deepseek-chat-v3-0324:free", #"gpt-4-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1
         )
 
-        return (response.choices[0].message.content)
+        return response.choices[0].message.content
     except Exception as e:
-        print ("Error in Openai code: ", e)
+        print(f"Error in OpenAI extraction: {e}")
         return None
